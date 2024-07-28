@@ -65,7 +65,8 @@
         1. run command `docker build -t email-service-backend:latest .`
       - start application with docker
         1. set variable `DB_HOST` in `.env` file to `backend_db`
-        2. run command to start application `docker-compose up`
+        2. set variable `REDIS_SERVER` in `.env` file to `redis`
+        3. run command to start application `docker-compose up`
   - [🕹️ Usage](#usage)
     - access application on http://localhost:8000/api/docs/
     - test endpoint from swagger documentation

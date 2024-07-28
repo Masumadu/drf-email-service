@@ -1,0 +1,75 @@
+version: "3.8"
+services:
+  backend:
+    image: email-service-backend:latest
+    container_name: "email-service-backend"
+    env_file:
+      - .env
+    ports:
+      - "8000:8000"
+    networks:
+      - drf_service
+    depends_on:
+      migration:
+        condition: service_completed_successfully
+
+  migration:
+    image: email-service-backend:latest
+    container_name: "email-service-migration"
+    command: python manage.py migrate
+    env_file:
+      - .env
+    networks:
+      - mail_service
+    depends_on:
+      backend_db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  backend_db:
+    image: postgres:12
+    container_name: "postgres-db"
+    restart: always
+    environment:
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_NAME}
+    volumes:
+      - $PWD/.ignore-service-database:/var/lib/postgresql/data
+    ports:
+      - "5430:5432"
+    networks:
+      - mail_service
+    healthcheck:
+        test: ["CMD", "pg_isready",  "-U", "${DB_USER}", "-d", "${DB_NAME}"]
+
+  redis:
+    image: redis:6.2.6-alpine
+    container_name: "redis-server"
+    restart: always
+    command: redis-server --requirepass ${REDIS_PASSWORD}
+    ports:
+      - "6378:6379"
+    networks:
+      - mail_service
+    healthcheck:
+        test: ["CMD", "redis-cli", "ping"]
+
+  celery_worker:
+    image: email-service-backend:latest
+    container_name: "email-service-worker"
+    env_file:
+      - .env
+    command: celery -A config worker -l INFO
+    networks:
+      - mail_service
+    depends_on:
+      backend_db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+networks:
+  mail_service:
+    name: mail_network

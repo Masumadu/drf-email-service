@@ -1,12 +1,12 @@
 import abc
-from typing import List, TypedDict
+from typing import List, TypedDict, Union
 
 
 class MailMailAttribute(TypedDict):
     sender_address: str
     sender_name: str
     password: str
-    recipients: List[str]
+    recipient: Union[List[str], str]
     subject: str
     html_body: str
     text_body: str

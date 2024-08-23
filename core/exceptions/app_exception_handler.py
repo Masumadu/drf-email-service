@@ -44,9 +44,13 @@ def http_exception_handler(exc):
     handle http exceptions raised by the application
     :param exc: the exception
     """
+    if hasattr(exc, "detail") and hasattr(exc, "status_code"):
+        message, status_code = exc.detail, exc.status_code
+    else:
+        message, status_code = str(exc), 500
     return Response(
-        data=exception_message(error_type="HttpException", message=exc.detail),
-        status=exc.status_code,
+        data=exception_message(error_type="HttpException", message=message),
+        status=status_code,
     )
 
 

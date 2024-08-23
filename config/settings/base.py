@@ -11,7 +11,6 @@ https://docs.djangoproject.com/en/5.0/ref/settings/
 """
 import ast
 import os
-from datetime import timedelta
 from pathlib import Path
 
 import environ
@@ -114,8 +113,6 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
     # third party libraries
     "rest_framework",
-    "rest_framework_simplejwt",
-    "rest_framework_simplejwt.token_blacklist",
     "drf_spectacular",
     "storages",
     # local apps
@@ -138,19 +135,8 @@ MIDDLEWARE = [
 
 REST_FRAMEWORK = {
     "EXCEPTION_HANDLER": "core.exceptions.app_exception_handler.custom_exception_handler",
-    "DEFAULT_AUTHENTICATION_CLASSES": [
-        # "rest_framework_simplejwt.authentication.JWTAuthentication",
-        # "core.utils.JWTAuthentication"
-    ],
+    "DEFAULT_AUTHENTICATION_CLASSES": ["core.utils.auth.KeycloakAuthentication"],
     "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
-}
-
-SIMPLE_JWT = {
-    "ACCESS_TOKEN_LIFETIME": timedelta(days=1),
-    "REFRESH_TOKEN_LIFETIME": timedelta(days=1),
-    "ROTATE_REFRESH_TOKENS": True,
-    "BLACKLIST_AFTER_ROTATION": True,
-    "AUTH_HEADER_TYPES": ("Bearer",),
 }
 
 SPECTACULAR_SETTINGS = {
@@ -285,6 +271,8 @@ CELERY_RESULT_BACKEND = (
 # Jwt Settings
 JWT_ALGORITHMS = ["HS256", "RS256"]
 
-# Keycloak Settings
-KEYCLOAK_URI = ""
-KEYCLOAK_REALM = ""
+# KEYCLOAK CONFIGURATION
+KEYCLOAK_SERVER_URL = env("KEYCLOAK_SERVER_URL")
+KEYCLOAK_REALM = env("KEYCLOAK_REALM")
+KEYCLOAK_CLIENT_ID = env("KEYCLOAK_CLIENT_ID")
+KEYCLOAK_CLIENT_SECRET = env("KEYCLOAK_CLIENT_SECRET")

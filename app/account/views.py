@@ -1,6 +1,9 @@
+import uuid
+
 import pinject
 from drf_spectacular.utils import extend_schema
 from rest_framework.decorators import api_view
+from rest_framework.request import Request
 from rest_framework.response import Response
 
 from core.utils import api_responses
@@ -31,10 +34,9 @@ api_doc_tag = ["MailAccount"]
     ),
     tags=api_doc_tag,
     parameters=[QueryMailAccountSerializer],
-    auth=[],
 )
 @api_view(http_method_names=["GET"])
-def view_all_accounts(request):
+def view_all_accounts(request: Request):
     return mail_account_controller.view_all_accounts(request)
 
 
@@ -43,11 +45,10 @@ def view_all_accounts(request):
     responses=api_responses(
         status_codes=[201, 401, 409, 422], schema=MailAccountSerializer
     ),
-    auth=[],
     tags=api_doc_tag,
 )
 @api_view(http_method_names=["POST"])
-def add_account(request):
+def add_account(request: Request):
     serializer = mail_account_controller.add_account(request)
     return Response(data=serializer.data, status=201)
 
@@ -58,11 +59,10 @@ def add_account(request):
         status_codes=[201, 401, 409, 422], schema=MailAccountSerializer
     ),
     tags=api_doc_tag,
-    auth=[],
 )
 @api_view(http_method_names=["GET"])
-def get_account(request, account_id):
-    serializer = mail_account_controller.get_account(account_id)
+def get_account(request: Request, account_id: uuid.UUID):
+    serializer = mail_account_controller.get_account(str(account_id))
     return Response(data=serializer.data, status=200)
 
 
@@ -70,20 +70,18 @@ def get_account(request, account_id):
     request=UpdateMailAccountSerializer,
     responses=api_responses(status_codes=[200, 401, 404], schema=MailAccountSerializer),
     tags=api_doc_tag,
-    auth=[],
 )
 @api_view(http_method_names=["PATCH"])
-def update_account(request, account_id):
-    serializer = mail_account_controller.update_account(request, account_id)
+def update_account(request: Request, account_id: uuid.UUID):
+    serializer = mail_account_controller.update_account(request, str(account_id))
     return Response(data=serializer.data, status=200)
 
 
 @extend_schema(
     responses=api_responses(status_codes=[204, 401, 404], schema=None),
     tags=api_doc_tag,
-    auth=[],
 )
 @api_view(http_method_names=["DELETE"])
-def delete_account(request, account_id):
-    result = mail_account_controller.delete_account(account_id)
+def delete_account(request: Request, account_id: uuid.UUID):
+    result = mail_account_controller.delete_account(request, str(account_id))
     return Response(data=result, status=204)

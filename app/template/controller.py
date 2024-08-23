@@ -82,11 +82,6 @@ class MailTemplateController:
         file_id = f"{uuid.uuid4()}_{file_name}.{ext}"
         object_storage_key = f"{TEMPLATE_DIR}/{user_id}/{file_id}"
         save_file(path=file_path(TEMPLATE_DIR, file_id), file=file)
-        # uploaded_file_name = file.name
-        # uploaded_file_size = file.size
-        # # Assuming you have a storage instance configured
-        # storage = file.storage
-        # storage.save(uploaded_file_name, file)
         file_name = default_storage.save(object_storage_key, ContentFile(file.read()))
         file_url = default_storage.url(file_name)
         print("this is the file ", file_url, object_storage_key)

@@ -1,7 +1,6 @@
-import uuid
-
 from amqp import exceptions as amqp_exc
 from kombu import exceptions as kombu_exc
+from rest_framework.request import Request
 
 from app.account.repository import MailAccountRepository
 from app.delivery.repository import MailDeliveryRepository
@@ -33,37 +32,34 @@ class BulkMailController:
         self.mail_delivery_repository = mail_delivery_repository
         self.mail_template_controller = mail_template_controller
 
-    def view_all_mails(self, request):
+    def view_all_mails(self, request: Request):
         paginator, result = self.bulk_mail_repository.index(request)
         serializer = BulkMailSerializer(result, many=True)
         return paginator.get_paginated_response(serializer.data)
 
-    def send_mail(self, request):
+    def send_mail(self, request: Request):
         serializer = SendBulkMailSerializer(data=request.data)
         if serializer.is_valid():
             data = serializer.validated_data
-            account, mail_record = self.create_mail_record(
+            obj_data, mail_record = self.create_mail_record(
                 obj_data=remove_none_fields(
-                    data={
-                        "sender": data.get("sender"),
-                        "name": data.get("name"),
-                        "recipients": data.get("recipients"),
-                        "subject": data.get("subject"),
-                    }
+                    data={"user_id": request.user.get("preferred_username"), **data}
                 )
             )
-            mail_delivery = self.create_delivery_record(mail_id=mail_record.id)
+            mail_delivery = self.create_delivery_record(
+                user_id=request.user.get("preferred_username"), mail_id=mail_record.id
+            )
             self.create_task(
-                account=account,
                 obj_data={
                     "mail_id": mail_record.id,
-                    "sender_address": data.get("sender"),
-                    "sender_name": data.get("name"),
-                    "recipients": data.get("recipients"),
-                    "subject": data.get("subject"),
+                    "sender_address": obj_data.get("sender"),
+                    "sender_name": obj_data.get("name"),
+                    "password": obj_data.get("password"),
+                    "recipients": obj_data.get("recipients"),
+                    "subject": obj_data.get("subject"),
                     "delivery_id": mail_delivery.id,
-                    "html_body": data.get("html_body"),
-                    "text_body": data.get("text_body"),
+                    "html_body": obj_data.get("html_body"),
+                    "text_body": obj_data.get("text_body"),
                 },
             )
             return BulkMailResponseSerializer(
@@ -74,13 +70,14 @@ class BulkMailController:
     def get_mail(self, obj_id: str):
         return BulkMailSerializer(self.bulk_mail_repository.find_by_id(obj_id))
 
-    def send_mail_with_template(self, request):
+    def send_mail_with_template(self, request: Request):
         serializer = SendBulkMailTemplateSerializer(data=request.data)
         if serializer.is_valid():
             data = serializer.validated_data
             message, redacted_message = self.mail_template_controller.generate_message(
                 query_template=remove_none_fields(
                     {
+                        "user_id": request.user.get("preferred_username"),
                         "id": data.get("template_id"),
                         "name": data.get("template_name"),
                         "is_deleted": False,
@@ -88,25 +85,22 @@ class BulkMailController:
                 ),
                 keywords=data.get("keywords", {}),
             )
-            account, mail_record = self.create_mail_record(
+            obj_data, mail_record = self.create_mail_record(
                 obj_data=remove_none_fields(
-                    data={
-                        "sender": data.get("sender"),
-                        "name": data.get("name"),
-                        "recipients": data.get("recipients"),
-                        "subject": data.get("subject"),
-                    }
+                    data={"user_id": request.user.get("preferred_username"), **data}
                 )
             )
-            mail_delivery = self.create_delivery_record(mail_id=mail_record.id)
+            mail_delivery = self.create_delivery_record(
+                mail_id=mail_record.id, user_id=request.user.get("preferred_username")
+            )
             self.create_task(
-                account=account,
                 obj_data={
                     "mail_id": mail_record.id,
-                    "sender_address": data.get("sender"),
-                    "sender_name": data.get("name"),
-                    "recipients": data.get("recipients"),
-                    "subject": data.get("subject"),
+                    "sender_address": obj_data.get("sender"),
+                    "sender_name": obj_data.get("name"),
+                    "password": obj_data.get("password"),
+                    "recipients": obj_data.get("recipients"),
+                    "subject": obj_data.get("subject"),
                     "delivery_id": mail_delivery.id,
                     "html_body": message,
                 },
@@ -122,28 +116,39 @@ class BulkMailController:
 
     def create_mail_record(self, obj_data: dict):
         account = self.mail_account_repository.find(
-            filter_param={"mail_address": obj_data.get("sender"), "is_deleted": False}
+            filter_param={
+                "user_id": obj_data.get("user_id"),
+                "mail_address": obj_data.get("sender"),
+                "is_deleted": False,
+            }
         )
-        obj_data["name"] = obj_data.get("name") or account.sender_name
-        obj_data["user_id"] = str(uuid.uuid4())
-        mail = self.bulk_mail_repository.create(obj_data=obj_data)
-        return account, mail
+        obj_data["name"] = obj_data.get("name", account.sender_name)
+        obj_data["password"] = account.password
+        mail = self.bulk_mail_repository.create(
+            obj_data={
+                "user_id": obj_data.get("user_id"),
+                "sender": obj_data.get("sender"),
+                "recipients": obj_data.get("recipients"),
+                "subject": obj_data.get("subject"),
+            }
+        )
+        return obj_data, mail
 
-    def create_delivery_record(self, mail_id: str):
+    def create_delivery_record(self, user_id: str, mail_id: str):
         return self.mail_delivery_repository.create(
-            obj_data={"user_id": str(uuid.uuid4()), "bulk_mail_id": mail_id}
+            obj_data={"user_id": user_id, "bulk_mail_id": mail_id}
         )
 
     # noinspection PyMethodMayBeStatic
-    def create_task(self, account, obj_data: dict):
+    def create_task(self, obj_data: dict):
         try:
             send_mail_task.apply_async(
                 kwargs={
                     "mail_attr": MailMailAttribute(
                         sender_address=obj_data.get("sender_address"),
-                        sender_name=obj_data.get("sender_name", account.sender_name),
-                        password=account.password,
-                        recipients=obj_data.get("recipients"),
+                        sender_name=obj_data.get("sender_name"),
+                        password=obj_data.get("password"),
+                        recipient=obj_data.get("recipients"),
                         subject=obj_data.get("subject"),
                         html_body=obj_data.get("html_body"),
                         text_body=obj_data.get("text_body"),

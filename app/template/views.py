@@ -38,7 +38,6 @@ api_doc_tag = ["MailTemplate"]
     ),
     tags=api_doc_tag,
     parameters=[QueryMailTemplateSerializer],
-    auth=[],
 )
 @api_view(http_method_names=["GET"])
 def view_all_templates(request):
@@ -61,7 +60,6 @@ def view_all_templates(request):
     responses=api_responses(
         status_codes=[201, 401, 409, 422], schema=MailTemplateSerializer
     ),
-    auth=[],
     tags=api_doc_tag,
 )
 @api_view(http_method_names=["POST"])
@@ -77,7 +75,6 @@ def add_template(request):
         status_codes=[201, 401, 409, 422], schema=MailTemplateSerializer
     ),
     tags=api_doc_tag,
-    auth=[],
 )
 @api_view(http_method_names=["POST"])
 def add_template_placeholders(request, template_id):
@@ -90,7 +87,6 @@ def add_template_placeholders(request, template_id):
         status_codes=[200, 401, 404], schema=MailTemplateSerializer
     ),
     tags=api_doc_tag,
-    auth=[],
 )
 @api_view(http_method_names=["GET"])
 def get_template(request, template_id):
@@ -113,7 +109,6 @@ def get_template(request, template_id):
     responses=api_responses(
         status_codes=[201, 401, 409, 422], schema=MailTemplateSerializer
     ),
-    auth=[],
     tags=api_doc_tag,
 )
 @api_view(http_method_names=["PATCH"])
@@ -125,7 +120,6 @@ def update_template(request, template_id):
 @extend_schema(
     responses=api_responses(status_codes=[204, 401, 404], schema=None),
     tags=api_doc_tag,
-    auth=[],
 )
 @api_view(http_method_names=["DELETE"])
 def delete_template(request, template_id):

@@ -1,6 +1,9 @@
+import uuid
+
 import pinject
 from drf_spectacular.utils import extend_schema
 from rest_framework.decorators import api_view
+from rest_framework.request import Request
 from rest_framework.response import Response
 
 from app.account.repository import MailAccountRepository
@@ -45,10 +48,9 @@ api_doc_tag = ["SingleMail"]
     ),
     tags=api_doc_tag,
     parameters=[QuerySingleMailSerializer],
-    auth=[],
 )
 @api_view(http_method_names=["GET"])
-def view_all_mails(request):
+def view_all_mails(request: Request):
     return single_mail_controller.view_all_mails(request)
 
 
@@ -57,11 +59,10 @@ def view_all_mails(request):
     responses=api_responses(
         status_codes=[201, 401, 409, 422], schema=SingleMailResponseSerializer
     ),
-    auth=[],
     tags=api_doc_tag,
 )
 @api_view(http_method_names=["POST"])
-def send_mail(request):
+def send_mail(request: Request):
     serializer = single_mail_controller.send_mail(request)
     return Response(data=serializer.data, status=201)
 
@@ -72,10 +73,9 @@ def send_mail(request):
         status_codes=[201, 401, 409, 422], schema=SingleMailSerializer
     ),
     tags=api_doc_tag,
-    auth=[],
 )
 @api_view(http_method_names=["POST"])
-def send_mail_with_template(request):
+def send_mail_with_template(request: Request):
     serializer = single_mail_controller.send_mail_with_template(request)
     return Response(data=serializer.data, status=201)
 
@@ -83,20 +83,18 @@ def send_mail_with_template(request):
 @extend_schema(
     responses=api_responses(status_codes=[200, 401, 404], schema=SingleMailSerializer),
     tags=api_doc_tag,
-    auth=[],
 )
 @api_view(http_method_names=["GET"])
-def get_mail(request, mail_id):
-    serializer = single_mail_controller.get_mail(mail_id)
+def get_mail(request: Request, mail_id: uuid.UUID):
+    serializer = single_mail_controller.get_mail(str(mail_id))
     return Response(data=serializer.data, status=200)
 
 
 @extend_schema(
     responses=api_responses(status_codes=[204, 401, 404], schema=None),
     tags=api_doc_tag,
-    auth=[],
 )
 @api_view(http_method_names=["DELETE"])
-def delete_mail(request, mail_id):
-    result = single_mail_controller.delete_mail(mail_id)
+def delete_mail(request: Request, mail_id: uuid.UUID):
+    result = single_mail_controller.delete_mail(str(mail_id))
     return Response(data=result, status=204)

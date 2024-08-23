@@ -1,4 +1,5 @@
 from datetime import datetime, timezone
+from typing import Union
 
 from django.core import mail as django_mail
 from django.core.mail import EmailMultiAlternatives
@@ -21,7 +22,7 @@ class MailService(MailServiceInterface):
     def send(self, mail_attribute: MailMailAttribute, **kwargs):
         sender_address = mail_attribute.get("sender_address")
         sender_name = mail_attribute.get("sender_name")
-        recipients = mail_attribute.get("recipients")
+        recipients = self._recipients(mail_attribute.get("recipient"))
         try:
             with django_mail.get_connection(
                 username=sender_address,
@@ -104,3 +105,6 @@ class MailService(MailServiceInterface):
     def send_in_batches(self, recipients: list, size: int):
         for _ in range(0, len(recipients), size):
             yield recipients[_ : size + _]
+
+    def _recipients(self, recipient: Union[list, str]):
+        return recipient if isinstance(recipient, list) else [recipient]

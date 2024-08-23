@@ -1,4 +1,4 @@
-from .auth import BlocklistPermission, JWTAuthentication
+from .auth import BlocklistPermission, KeycloakAuthentication
 from .util import (
     CustomPageNumberPagination,
     JSONEncoder,

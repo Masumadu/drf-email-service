@@ -1,7 +1,6 @@
-import uuid
-
 from amqp import exceptions as amqp_exc
 from kombu import exceptions as kombu_exc
+from rest_framework.request import Request
 
 from app.account.repository import MailAccountRepository
 from app.delivery.repository import MailDeliveryRepository
@@ -34,37 +33,34 @@ class SingleMailController:
         self.mail_delivery_repository = mail_delivery_repository
         self.mail_template_controller = mail_template_controller
 
-    def view_all_mails(self, request):
+    def view_all_mails(self, request: Request):
         paginator, result = self.single_mail_repository.index(request)
         serializer = SingleMailSerializer(result, many=True)
         return paginator.get_paginated_response(serializer.data)
 
-    def send_mail(self, request):
+    def send_mail(self, request: Request):
         serializer = SendSingleMailSerializer(data=request.data)
         if serializer.is_valid():
             data = serializer.validated_data
-            account, mail_record = self.create_mail_record(
+            obj_data, mail_record = self.create_mail_record(
                 obj_data=remove_none_fields(
-                    data={
-                        "sender": data.get("sender"),
-                        "name": data.get("name"),
-                        "recipient": data.get("recipient"),
-                        "subject": data.get("subject"),
-                    }
+                    data={"user_id": request.user.get("preferred_username"), **data}
                 )
             )
-            mail_delivery = self.create_delivery_record(mail_id=mail_record.id)
+            mail_delivery = self.create_delivery_record(
+                user_id=request.user.get("preferred_username"), mail_id=mail_record.id
+            )
             self.create_task(
-                account=account,
                 obj_data={
                     "mail_id": mail_record.id,
-                    "sender_address": data.get("sender"),
-                    "sender_name": data.get("name"),
-                    "recipient": data.get("recipient"),
-                    "subject": data.get("subject"),
+                    "sender_address": obj_data.get("sender"),
+                    "sender_name": obj_data.get("name"),
+                    "password": obj_data.get("password"),
+                    "recipient": obj_data.get("recipient"),
+                    "subject": obj_data.get("subject"),
                     "delivery_id": mail_delivery.id,
-                    "html_body": data.get("html_body"),
-                    "text_body": data.get("text_body"),
+                    "html_body": obj_data.get("html_body"),
+                    "text_body": obj_data.get("text_body"),
                 },
             )
             return SingleMailResponseSerializer(
@@ -75,7 +71,7 @@ class SingleMailController:
     def get_mail(self, obj_id: str):
         return SingleMailSerializer(self.single_mail_repository.find_by_id(obj_id))
 
-    def send_mail_with_template(self, request):
+    def send_mail_with_template(self, request: Request):
         serializer = SendSingleMailTemplateSerializer(data=request.data)
         if serializer.is_valid():
             data = serializer.validated_data
@@ -83,31 +79,29 @@ class SingleMailController:
                 query_template=remove_none_fields(
                     {
                         "id": data.get("template_id"),
+                        "user_id": request.user.get("preferred_username"),
                         "name": data.get("template_name"),
                         "is_deleted": False,
                     }
                 ),
                 keywords=data.get("keywords", {}),
             )
-            account, mail_record = self.create_mail_record(
+            obj_data, mail_record = self.create_mail_record(
                 obj_data=remove_none_fields(
-                    data={
-                        "sender": data.get("sender"),
-                        "name": data.get("name"),
-                        "recipient": data.get("recipient"),
-                        "subject": data.get("subject"),
-                    }
+                    data={"user_id": request.user.get("preferred_username"), **data}
                 )
             )
-            mail_delivery = self.create_delivery_record(mail_id=mail_record.id)
+            mail_delivery = self.create_delivery_record(
+                user_id=request.user.get("preferred_username"), mail_id=mail_record.id
+            )
             self.create_task(
-                account=account,
                 obj_data={
                     "mail_id": mail_record.id,
-                    "sender_address": data.get("sender"),
-                    "sender_name": data.get("name"),
-                    "recipient": data.get("recipient"),
-                    "subject": data.get("subject"),
+                    "sender_address": obj_data.get("sender"),
+                    "sender_name": obj_data.get("name"),
+                    "password": obj_data.get("password"),
+                    "recipient": obj_data.get("recipient"),
+                    "subject": obj_data.get("subject"),
                     "delivery_id": mail_delivery.id,
                     "html_body": message,
                 },
@@ -125,31 +119,39 @@ class SingleMailController:
         account = self.mail_account_repository.find(
             filter_param={"mail_address": obj_data.get("sender"), "is_deleted": False}
         )
-        obj_data["name"] = obj_data.get("name") or account.sender_name
-        obj_data["user_id"] = str(uuid.uuid4())
-        mail = self.single_mail_repository.create(obj_data=obj_data)
-        return account, mail
+        obj_data["name"] = obj_data.get("name", account.sender_name)
+        obj_data["password"] = account.password
+        mail = self.single_mail_repository.create(
+            obj_data={
+                "user_id": obj_data.get("user_id"),
+                "sender": obj_data.get("sender"),
+                "recipient": obj_data.get("recipient"),
+                "subject": obj_data.get("subject"),
+                "html_body": obj_data.get("html_body"),
+                "text_body": obj_data.get("text_body"),
+            }
+        )
+        return obj_data, mail
 
-    def create_delivery_record(self, mail_id: str):
+    def create_delivery_record(self, user_id: str, mail_id: str):
         return self.mail_delivery_repository.create(
             obj_data={
-                "user_id": str(uuid.uuid4()),
+                "user_id": user_id,
                 "single_mail_id": mail_id,
-                "provider": None,
                 "status": MailDeliveryStatusEnum.not_sent_to_provider.value,
             }
         )
 
     # noinspection PyMethodMayBeStatic
-    def create_task(self, account, obj_data: dict):
+    def create_task(self, obj_data: dict):
         try:
             send_mail_task.apply_async(
                 kwargs={
                     "mail_attr": MailMailAttribute(
                         sender_address=obj_data.get("sender_address"),
-                        sender_name=obj_data.get("sender_name", account.sender_name),
-                        password=account.password,
-                        recipients=[obj_data.get("recipient")],
+                        sender_name=obj_data.get("sender_name"),
+                        password=obj_data.get("password"),
+                        recipient=obj_data.get("recipient"),
                         subject=obj_data.get("subject"),
                         html_body=obj_data.get("html_body"),
                         text_body=obj_data.get("text_body"),

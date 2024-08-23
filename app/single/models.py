@@ -14,8 +14,8 @@ class SingleMailModel(BaseModel):
     name = models.CharField(null=False, db_index=True)
     recipient = models.CharField(null=False, db_index=True)
     subject = models.CharField()
-    html_body = models.CharField()
-    text_body = models.CharField()
+    html_body = models.CharField(null=False)
+    text_body = models.CharField(null=True)
     is_scheduled = models.BooleanField(default=False)
     scheduled_date = models.DateTimeField(null=True)
 

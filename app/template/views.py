@@ -7,10 +7,7 @@ from rest_framework.response import Response
 from core.utils import api_requests, api_responses
 
 from .controller import MailTemplateController
-from .repository import (
-    MailTemplateRepository,
-    ObjectStorageLogRepository,
-)
+from .repository import MailTemplateRepository
 from .serializer import (
     MailTemplateSerializer,
     PaginatedMailTemplateSerializer,
@@ -23,7 +20,6 @@ obj_graph = pinject.new_object_graph(
     classes=[
         MailTemplateController,
         MailTemplateRepository,
-        ObjectStorageLogRepository,
     ],
 )
 mail_template_controller: MailTemplateController = obj_graph.provide(

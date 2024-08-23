@@ -9,10 +9,7 @@ from rest_framework.response import Response
 from app.account.repository import MailAccountRepository
 from app.delivery.repository import MailDeliveryRepository
 from app.template.controller import MailTemplateController
-from app.template.repository import (
-    MailTemplateRepository,
-    ObjectStorageLogRepository,
-)
+from app.template.repository import MailTemplateRepository
 from core.utils import api_responses
 
 from .controller import SingleMailController
@@ -35,7 +32,6 @@ obj_graph = pinject.new_object_graph(
         MailDeliveryRepository,
         MailTemplateController,
         MailTemplateRepository,
-        ObjectStorageLogRepository,
     ],
 )
 single_mail_controller: SingleMailController = obj_graph.provide(SingleMailController)

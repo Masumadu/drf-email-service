@@ -8,12 +8,12 @@ from app.template.controller import MailTemplateController
 from core.exceptions import AppException
 from core.interfaces import MailMailAttribute
 from core.tasks import send_mail_task
-from core.utils import remove_none_fields
 
 from .repository import BulkMailRepository
 from .serializer import (
     BulkMailResponseSerializer,
     BulkMailSerializer,
+    ConsumerSendBulkMailSerializer,
     SendBulkMailSerializer,
     SendBulkMailTemplateSerializer,
 )
@@ -42,12 +42,38 @@ class BulkMailController:
         if serializer.is_valid():
             data = serializer.validated_data
             obj_data, mail_record = self.create_mail_record(
-                obj_data=remove_none_fields(
-                    data={"user_id": request.user.get("preferred_username"), **data}
-                )
+                user_id=request.user.get("preferred_username"), obj_data=data
             )
             mail_delivery = self.create_delivery_record(
                 user_id=request.user.get("preferred_username"), mail_id=mail_record.id
+            )
+            self.create_task(
+                obj_data={
+                    "mail_id": mail_record.id,
+                    "sender_address": obj_data.get("sender"),
+                    "sender_name": obj_data.get("name"),
+                    "password": obj_data.get("password"),
+                    "recipients": obj_data.get("recipients"),
+                    "subject": obj_data.get("subject"),
+                    "delivery_id": mail_delivery.id,
+                    "html_body": obj_data.get("html_body"),
+                    "text_body": obj_data.get("text_body"),
+                },
+            )
+            return BulkMailResponseSerializer(
+                {"id": mail_record.id, "is_success": True}
+            )
+        raise AppException.ValidationException(error_message=serializer.errors)
+
+    def consumer_send_mail(self, obj_data: dict):
+        serializer = ConsumerSendBulkMailSerializer(data=obj_data)
+        if serializer.is_valid():
+            data = serializer.validated_data
+            obj_data, mail_record = self.create_mail_record(
+                user_id=data.get("user_id"), obj_data=data
+            )
+            mail_delivery = self.create_delivery_record(
+                user_id=data.get("user_id"), mail_id=mail_record.id
             )
             self.create_task(
                 obj_data={
@@ -75,20 +101,16 @@ class BulkMailController:
         if serializer.is_valid():
             data = serializer.validated_data
             message, redacted_message = self.mail_template_controller.generate_message(
-                query_template=remove_none_fields(
-                    {
-                        "user_id": request.user.get("preferred_username"),
-                        "id": data.get("template_id"),
-                        "name": data.get("template_name"),
-                        "is_deleted": False,
-                    }
-                ),
+                query_template={
+                    "user_id": request.user.get("preferred_username"),
+                    "id": data.get("template_id"),
+                    "name": data.get("template_name"),
+                    "is_deleted": False,
+                },
                 keywords=data.get("keywords", {}),
             )
             obj_data, mail_record = self.create_mail_record(
-                obj_data=remove_none_fields(
-                    data={"user_id": request.user.get("preferred_username"), **data}
-                )
+                user_id=request.user.get("preferred_username"), obj_data=data
             )
             mail_delivery = self.create_delivery_record(
                 mail_id=mail_record.id, user_id=request.user.get("preferred_username")
@@ -114,10 +136,10 @@ class BulkMailController:
         self.bulk_mail_repository.delete_by_id(obj_id)
         return None
 
-    def create_mail_record(self, obj_data: dict):
+    def create_mail_record(self, user_id: str, obj_data: dict):
         account = self.mail_account_repository.find(
             filter_param={
-                "user_id": obj_data.get("user_id"),
+                "user_id": user_id,
                 "mail_address": obj_data.get("sender"),
                 "is_deleted": False,
             }
@@ -126,7 +148,7 @@ class BulkMailController:
         obj_data["password"] = account.password
         mail = self.bulk_mail_repository.create(
             obj_data={
-                "user_id": obj_data.get("user_id"),
+                "user_id": user_id,
                 "sender": obj_data.get("sender"),
                 "recipients": obj_data.get("recipients"),
                 "subject": obj_data.get("subject"),

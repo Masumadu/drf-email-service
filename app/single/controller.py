@@ -8,7 +8,6 @@ from app.template.controller import MailTemplateController
 from core.exceptions import AppException
 from core.interfaces import MailMailAttribute
 from core.tasks import send_mail_task
-from core.utils import remove_none_fields
 from core.utils.constants import MailDeliveryStatusEnum
 
 from .repository import SingleMailRepository
@@ -43,9 +42,7 @@ class SingleMailController:
         if serializer.is_valid():
             data = serializer.validated_data
             obj_data, mail_record = self.create_mail_record(
-                obj_data=remove_none_fields(
-                    data={"user_id": request.user.get("preferred_username"), **data}
-                )
+                user_id=request.user.get("preferred_username"), obj_data=data
             )
             mail_delivery = self.create_delivery_record(
                 user_id=request.user.get("preferred_username"), mail_id=mail_record.id
@@ -76,20 +73,17 @@ class SingleMailController:
         if serializer.is_valid():
             data = serializer.validated_data
             message, redacted_message = self.mail_template_controller.generate_message(
-                query_template=remove_none_fields(
-                    {
-                        "id": data.get("template_id"),
-                        "user_id": request.user.get("preferred_username"),
-                        "name": data.get("template_name"),
-                        "is_deleted": False,
-                    }
-                ),
+                query_template={
+                    "id": data.get("template_id"),
+                    "user_id": request.user.get("preferred_username"),
+                    "name": data.get("template_name"),
+                    "is_deleted": False,
+                },
                 keywords=data.get("keywords", {}),
             )
+            data["html_body"] = message
             obj_data, mail_record = self.create_mail_record(
-                obj_data=remove_none_fields(
-                    data={"user_id": request.user.get("preferred_username"), **data}
-                )
+                user_id=request.user.get("preferred_username"), obj_data=data
             )
             mail_delivery = self.create_delivery_record(
                 user_id=request.user.get("preferred_username"), mail_id=mail_record.id
@@ -115,7 +109,7 @@ class SingleMailController:
         self.single_mail_repository.delete_by_id(obj_id)
         return None
 
-    def create_mail_record(self, obj_data: dict):
+    def create_mail_record(self, user_id: str, obj_data: dict):
         account = self.mail_account_repository.find(
             filter_param={"mail_address": obj_data.get("sender"), "is_deleted": False}
         )
@@ -123,7 +117,7 @@ class SingleMailController:
         obj_data["password"] = account.password
         mail = self.single_mail_repository.create(
             obj_data={
-                "user_id": obj_data.get("user_id"),
+                "user_id": user_id,
                 "sender": obj_data.get("sender"),
                 "recipient": obj_data.get("recipient"),
                 "subject": obj_data.get("subject"),

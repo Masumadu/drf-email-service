@@ -14,8 +14,8 @@ class MailTemplateSerializer(serializers.Serializer):
     user_id = serializers.UUIDField(required=True)
     name = serializers.CharField(required=True)
     placeholders = serializers.ListField(child=PlaceHolderSerializer(), required=False)
-    file_sys_path = serializers.CharField(required=False)
-    object_storage = serializers.UUIDField(required=False)
+    file = serializers.FileField(required=True)
+    file_system_id = serializers.CharField(required=False)
 
 
 class PaginatedMailTemplateSerializer(PaginatedSerializer):

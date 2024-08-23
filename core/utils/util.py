@@ -164,12 +164,10 @@ def validate_file_type(file, allowed_extensions: List[str] = None):
     return name, extension, file.content_type
 
 
-def validate_file_size(allowed_size_in_mb: int, file):
-    # reminder: get the file size (in bytes)
-    file_size = file.size
-    if file_size > allowed_size_in_mb * 1024 * 1024:
+def validate_file_size(file, allowed_size_in_mb: int = 5):
+    if file.size > 1024 * 1024 * allowed_size_in_mb:
         raise AppException.BadRequestException(error_message="file too large")
-    return file_size
+    return allowed_size_in_mb
 
 
 def create_directory(directory: str):

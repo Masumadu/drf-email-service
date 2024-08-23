@@ -28,7 +28,7 @@ class SendBulkMailSerializer(serializers.Serializer):
     )
     subject = serializers.CharField(required=True)
     html_body = serializers.CharField(required=True)
-    text_body = serializers.CharField(required=False)
+    text_body = serializers.CharField(required=False, allow_null=True)
 
 
 class SendBulkMailTemplateSerializer(serializers.Serializer):
@@ -46,6 +46,10 @@ class SendBulkMailTemplateSerializer(serializers.Serializer):
 class BulkMailResponseSerializer(serializers.Serializer):
     id = serializers.UUIDField(required=True)
     is_success = serializers.BooleanField(required=True)
+
+
+class ConsumerSendBulkMailSerializer(SendBulkMailSerializer):
+    user_id = serializers.UUIDField(required=True)
 
 
 class QueryBulkMailSerializer(serializers.Serializer):

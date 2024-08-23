@@ -67,7 +67,6 @@ class MailService(MailServiceInterface):
                             }
                         )
                         logger.error(f"{exc}")
-
         except Exception as exc:
             self.error = True
             self.update_delivery_report(

@@ -17,14 +17,14 @@ import environ
 
 env = environ.Env()
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
-BASE_DIR = Path(__file__).resolve().parent.parent
-environ.Env.read_env(env_file=f"{BASE_DIR.parent}/.env")
+BASE_DIR = Path(__file__).resolve().parent.parent.parent
+environ.Env.read_env(env_file=f"{BASE_DIR}/.env")
 
 # URL to use when referring to media files located in MEDIA_ROOT
 MEDIA_URL = "/media/"
 
 # Absolute filesystem path to the directory where user-uploaded files will be stored
-MEDIA_ROOT = os.path.join(BASE_DIR.parent, "media")
+MEDIA_ROOT = os.path.join(BASE_DIR, "media")
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.0/howto/deployment/checklist/
@@ -45,7 +45,7 @@ LOGGING = {
     "loggers": {
         "root": {
             "level": "INFO",
-            "handlers": ["console_handler"],
+            "handlers": ["console_handler", "mail_admins"],
         },
         "django.request": {
             "handlers": ["error_file_handler", "console_handler", "mail_admins"],
@@ -82,7 +82,7 @@ LOGGING = {
             "backupCount": 1,
         },
         "mail_admins": {
-            "level": "ERROR",
+            "level": "CRITICAL",
             "class": "django.utils.log.AdminEmailHandler",
             "include_html": True,
         },
@@ -160,16 +160,20 @@ SPECTACULAR_SETTINGS = {
 
 STORAGES = {
     "default": {
-        "BACKEND": "storages.backends.s3.S3Storage",
-        "OPTIONS": {
-            "access_key": env("OBJECT_STORAGE_ACCESS_KEY"),
-            "secret_key": env("OBJECT_STORAGE_SECRET_KEY"),
-            "bucket_name": env("OBJECT_STORAGE_BUCKET"),
-            "endpoint_url": env("OBJECT_STORAGE_URL"),
-        },
+        "BACKEND": "django.core.files.storage.FileSystemStorage",
     },
     "staticfiles": {
         "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage",
+    },
+    "minio": {
+        "BACKEND": "storages.backends.s3.S3Storage",
+        "OPTIONS": {
+            "bucket_name": env("MINIO_BUCKET"),
+            "endpoint_url": env("MINIO_URL"),
+            "access_key": env("MINIO_ACCESS_KEY"),
+            "secret_key": env("MINIO_SECRET_KEY"),
+            "signature_version": "s3v4",
+        },
     },
 }
 
@@ -178,7 +182,7 @@ ROOT_URLCONF = "config.urls"
 TEMPLATES = [
     {
         "BACKEND": "django.template.backends.django.DjangoTemplates",
-        "DIRS": [],
+        "DIRS": [os.path.join(MEDIA_ROOT, "templates")],
         "APP_DIRS": True,
         "OPTIONS": {
             "context_processors": [
@@ -204,9 +208,6 @@ DATABASES = {
         "PASSWORD": env("DB_PASSWORD"),
         "HOST": env("DB_HOST"),
         "PORT": env("DB_PORT"),
-        "TEST": {
-            "NAME": env("TEST_DB_NAME"),
-        },
     }
 }
 
@@ -250,8 +251,8 @@ STATIC_URL = "static/"
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
-SERVER_EMAIL = env("SERVER_EMAIL")
-DEFAULT_FROM_EMAIL = env("DEFAULT_FROM_EMAIL")
+SERVER_EMAIL = env("EMAIL_HOST_USER")
+DEFAULT_FROM_EMAIL = env("EMAIL_HOST_USER")
 ADMINS = [ast.literal_eval(admin) for admin in env("ADMINS").split("|")]
 EMAIL_HOST = env("EMAIL_HOST")
 EMAIL_PORT = env("EMAIL_PORT")
@@ -276,3 +277,10 @@ KEYCLOAK_SERVER_URL = env("KEYCLOAK_SERVER_URL")
 KEYCLOAK_REALM = env("KEYCLOAK_REALM")
 KEYCLOAK_CLIENT_ID = env("KEYCLOAK_CLIENT_ID")
 KEYCLOAK_CLIENT_SECRET = env("KEYCLOAK_CLIENT_SECRET")
+
+# KAFKA CONFIGURATION
+KAFKA_BOOTSTRAP_SERVERS = env("KAFKA_BOOTSTRAP_SERVERS").split("|")
+KAFKA_SERVER_USERNAME = env("KAFKA_SERVER_USERNAME")
+KAFKA_SERVER_PASSWORD = env("KAFKA_SERVER_PASSWORD")
+KAFKA_SUBSCRIPTIONS = env("KAFKA_SUBSCRIPTIONS")
+KAFKA_CONSUMER_GROUP = env("KAFKA_CONSUMER_GROUP")

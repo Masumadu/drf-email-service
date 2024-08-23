@@ -24,6 +24,8 @@ celery = "^5.4.0"
 pyjwt = "^2.8.0"
 redis = "^5.0.7"
 python-keycloak = "^4.3.0"
+kafka-python = "^2.0.2"
+loguru = "^0.7.2"
 
 
 [build-system]

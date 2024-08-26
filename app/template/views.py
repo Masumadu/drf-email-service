@@ -72,10 +72,10 @@ def add_template(request):
     ),
     tags=api_doc_tag,
 )
-@api_view(http_method_names=["POST"])
+@api_view(http_method_names=["PATCH"])
 def add_template_placeholders(request, template_id):
     serializer = mail_template_controller.add_template_placeholder(request, template_id)
-    return Response(data=serializer.data, status=201)
+    return Response(data=serializer.data, status=200)
 
 
 @extend_schema(
@@ -110,7 +110,7 @@ def get_template(request, template_id):
 @api_view(http_method_names=["PATCH"])
 def update_template(request, template_id):
     serializer = mail_template_controller.update_template(request, template_id)
-    return Response(data=serializer.data, status=201)
+    return Response(data=serializer.data, status=200)
 
 
 @extend_schema(
@@ -119,5 +119,5 @@ def update_template(request, template_id):
 )
 @api_view(http_method_names=["DELETE"])
 def delete_template(request, template_id):
-    result = mail_template_controller.delete_mail(template_id)
+    result = mail_template_controller.delete_template(template_id)
     return Response(data=result, status=204)

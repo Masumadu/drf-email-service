@@ -26,6 +26,7 @@ redis = "^5.0.7"
 python-keycloak = "^4.3.0"
 kafka-python = "^2.0.2"
 loguru = "^0.7.2"
+django-fakeredis = "^0.1.2"
 
 
 [build-system]

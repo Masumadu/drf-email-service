@@ -1,6 +1,6 @@
 <div align="center">
   <h1><b>DJANGO REST FRAMEWORK EMAIL SERVICE</b></h1>
-  <h4>A microservice application the provides endpoint for sending emails.</h4>
+  <h4>A microservice application the provides restful apis for sending emails.</h4>
 </div>
 
 ## 📗 Table of Contents
@@ -8,7 +8,8 @@
 - [📖 About the Project](#about-project)
   - This application can be integrated into an organization mail server and be used by other applications for sending emails.
     - [👀 Overview](#overview)
-      - This application is integrated with postgres, celery and redis.
+      - This application is integrated with postgres, celery, redis and miniO.
+      - Depends on https://github.com/Masumadu/drf-iam-service for identity and access management.
     - [🛠 Built With](#built-with)
       - Python
       - Poetry
@@ -34,6 +35,7 @@
     - postgres
     - docker
     - docker-compose
+    - minio
     - git
   - [⚓ Install](#setup)
     - install the various tools listed under prerequisite on your local machine
@@ -72,7 +74,7 @@
     - test endpoint from swagger documentation
   - [💯 Run tests](#run-tests)
     - To run the unit tests cases
-      1. run the  command `python3 manage.py test -v 2`
+      1. run the  command `python3 manage.py test --settings=config.settings.testing --failfast -v 2`
   - [🚀 Deployment](#triangular_flag_on_post-deployment)
     - TODO
 - [👥 Author](#author)

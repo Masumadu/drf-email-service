@@ -94,7 +94,7 @@ class MailTemplateController:
             return MailTemplateSerializer(mail_template)
         raise AppException.ValidationException(error_message=serializer.errors)
 
-    def delete_mail(self, obj_id: str):
+    def delete_template(self, obj_id: str):
         self.mail_template_repository.delete_by_id(obj_id)
         return None
 

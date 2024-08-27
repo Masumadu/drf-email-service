@@ -44,6 +44,8 @@
     - from your terminal, navigate to your preferred directory location on your machine
     - clone the repository into a directory of your choice
     - navigate into the application's directory
+    - this repository is highly dependent on https://github.com/Masumadu/drf-iam-service.
+    - for a successful run of the application, kindly run https://github.com/Masumadu/drf-iam-service before starting this application
   - [▶️ Run Application](#run-application)
     - without docker:
       - create a virtual environment and activate it by executing below commands
@@ -61,16 +63,19 @@
           3. set the variables in the file `.env` to their appropriate values
       - after installing dependencies, run below command to start application
           1. apply database migrations to the database with command `python3 manage.py migrate`
-          2. start the application with command `python3 manage.py runserver`
+          2. start the application with command `python3 manage.py runserver 8001`
     - with docker:
       - build the docker image
-        1. run command `docker build -t email-service-backend:latest .`
+        1. run command `docker build -t drf-be-email-service:latest .`
       - start application with docker
-        1. set variable `DB_HOST` in `.env` file to `backend_db`
-        2. set variable `REDIS_SERVER` in `.env` file to `redis`
-        3. run command to start application `docker-compose up`
+        1. set variable `DB_HOST` in `.env` file to `email_backend_db`
+        2. set variable `REDIS_SERVER` in `.env` file to `email_redis`
+        3. set variable `MINIO_URL`  in `.env` file to `http://minio:9000`
+        4. set variable `KEYCLOAK_SERVER_URL` in `.env` file to `http://keycloak:8080`
+        5. set variable `KAFKA_BOOTSTRAP_SERVERS` in `.env` file to `kafka:9092`
+        6. run command to start application `docker-compose up` or `docker compose up`
   - [🕹️ Usage](#usage)
-    - access application on http://localhost:8000/api/docs/
+    - access application on http://localhost:8001/api/docs/
     - test endpoint from swagger documentation
   - [💯 Run tests](#run-tests)
     - To run the unit tests cases

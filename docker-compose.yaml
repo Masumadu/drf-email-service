@@ -1,75 +1,94 @@
 version: "3.8"
 services:
-  backend:
-    image: email-service-backend:latest
-    container_name: "email-service-backend"
+  email_backend:
+    image: drf-be-email-service:latest
+    container_name: "drf-email-backend"
     env_file:
       - .env
     ports:
-      - "8000:8000"
+      - "8001:8000"
     networks:
-      - mail_service
+      - drf_notification_service
     depends_on:
-      migration:
+      email_migration:
         condition: service_completed_successfully
-      redis:
+      email_redis:
         condition: service_healthy
+      email_celery_worker:
+        condition: service_started
+      minio:
+        condition: service_started
 
-  migration:
-    image: email-service-backend:latest
-    container_name: "email-service-migration"
+  email_migration:
+    image: drf-be-email-service:latest
+    container_name: "drf-email-migration"
     command: python manage.py migrate
     env_file:
       - .env
     networks:
-      - mail_service
+      - drf_notification_service
     depends_on:
-      backend_db:
+      email_backend_db:
         condition: service_healthy
 
-  backend_db:
-    image: postgres:12
-    container_name: "email-service-postgres"
+  email_backend_db:
+    image: postgres:16
+    container_name: "drf-email-backend-db"
     restart: always
     environment:
       POSTGRES_USER: ${DB_USER}
       POSTGRES_PASSWORD: ${DB_PASSWORD}
       POSTGRES_DB: ${DB_NAME}
     volumes:
-      - $PWD/.ignore-service-database:/var/lib/postgresql/data
+      - ~/temp/docker-volumes/drf-email-database:/var/lib/postgresql/data
     ports:
-      - "5430:5432"
+      - "5440:5432"
     networks:
-      - mail_service
+      - drf_notification_service
     healthcheck:
         test: ["CMD", "pg_isready",  "-U", "${DB_USER}", "-d", "${DB_NAME}"]
 
-  redis:
+  email_redis:
     image: redis:6.2.6-alpine
-    container_name: "email-service-redis"
+    container_name: "drf-email-redis"
     restart: always
     command: redis-server --requirepass ${REDIS_PASSWORD}
     ports:
-      - "6378:6379"
+      - "6377:6379"
     networks:
-      - mail_service
+      - drf_notification_service
     healthcheck:
         test: ["CMD", "redis-cli", "ping"]
 
-  celery_worker:
-    image: email-service-backend:latest
-    container_name: "email-service-worker"
+  email_celery_worker:
+    image: drf-be-email-service:latest
+    container_name: "drf-email-celery-worker"
     env_file:
       - .env
-    command: celery -A config worker -l INFO
+    command: celery -A config worker -l INFO --pool=threads --concurrency=5
     networks:
-      - mail_service
+      - drf_notification_service
     depends_on:
-      backend_db:
+      email_backend_db:
         condition: service_healthy
-      redis:
+      email_redis:
         condition: service_healthy
 
+  minio:
+    image: quay.io/minio/minio
+    container_name: "minio-server"
+    environment:
+      MINIO_ROOT_USER: admin
+      MINIO_ROOT_PASSWORD: p@ssw0rd
+    command: server --console-address ":9001" /data
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - ~/temp/docker-volumes/minio-storage:/data
+    networks:
+      - drf_notification_service
+
 networks:
-  mail_service:
-    name: mail_network
+  drf_notification_service:
+    name: drf_notification_network
